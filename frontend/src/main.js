@@ -6,11 +6,26 @@ import { WebsocketProvider } from 'y-websocket'
 import 'quill/dist/quill.core.css'
 import 'quill/dist/quill.snow.css'
 
-Quill.register('modules/cursors', QuillCursors)
+export function buildDocumentWsUrl() {
+  const rawBase = (import.meta.env.VITE_BACKEND_URL)?.trim();
+  const cleanBase = rawBase.replace(/\/+$/, "");
 
-const docId = window.location.pathname.split('/').pop() || 'default-document'
-const ydoc = new Y.Doc()
-const url = `ws://${import.meta.env.VITE_BACKEND_HOST}:${import.meta.env.VITE_BACKEND_PORT}/ws/documents`
+  const wsBase = cleanBase.startsWith("https://")
+    ? "wss://" + cleanBase.slice("https://".length)
+    : cleanBase.startsWith("http://")
+      ? "ws://" + cleanBase.slice("http://".length)
+      : cleanBase;
+
+  return `${wsBase}/ws/documents`;
+}
+
+Quill.register('modules/cursors', QuillCursors);
+
+const docId = window.location.pathname.split('/').pop() || 'default-document';
+const ydoc = new Y.Doc();
+const url = buildDocumentWsUrl();
+
+console.log('Connecting to document:', docId, 'via', url);
 
 const quill = new Quill(document.querySelector('#editor'), {
   modules: {

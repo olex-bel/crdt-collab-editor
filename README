@@ -1,0 +1,151 @@
+
+# CRDT Collaborative Editor
+
+A real-time collaborative text editor built with [Yjs](https://yjs.dev/),
+[Quill](https://quilljs.com/), [FastAPI](https://fastapi.tiangolo.com/), and
+PostgreSQL. Changes are synchronized over WebSockets and persisted as Yjs
+updates, so document state survives server restarts.
+
+## Features
+
+- Real-time collaborative editing
+- Shared Quill rich-text content
+- Remote cursor support
+- PostgreSQL-backed Yjs update storage
+- Persistent document state
+- REST endpoint for listing stored documents
+- Configurable backend origin and frontend backend URL
+
+## Project structure
+
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── main.py       # FastAPI app, WebSocket and REST routes
+│   │   ├── database.py   # Async SQLModel/PostgreSQL connection
+│   │   ├── models.py     # Stored Yjs update model
+│   │   ├── schemas.py    # API response schemas
+│   │   ├── store.py      # PostgreSQL Yjs store
+│   │   └── config.py     # Environment-based settings
+│   └── pyproject.toml
+└── frontend/
+    ├── src/main.js       # Yjs, Quill and WebSocket setup
+    ├── index.html
+    └── package.json
+```
+
+## Requirements
+
+- Python 3.14
+- PostgreSQL
+- Node.js and npm
+- [uv](https://docs.astral.sh/uv/) for Python dependency management
+
+## Configuration
+
+Create the environment files from the provided examples:
+
+```bash
+cp backend/.env-example backend/.env
+cp frontend/.env-example frontend/.env
+```
+
+Configure PostgreSQL in `backend/.env`:
+
+```dotenv
+POSTGRES_SERVER=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=doc
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_postgres_password
+```
+
+The optional `ORIGINS` setting controls the FastAPI CORS allow-list. If it is
+not set, all origins are allowed.
+
+Configure the frontend server URL in `frontend/.env`:
+
+```dotenv
+VITE_BACKEND_URL=http://127.0.0.1:8000
+```
+
+For an HTTPS backend, use `https://...`; the frontend converts this to a
+`wss://` WebSocket URL. HTTP URLs are converted to `ws://`.
+
+## Run locally
+
+Start PostgreSQL and make sure the database named in `POSTGRES_DB` exists.
+
+In the first terminal, start the backend:
+
+```bash
+cd backend
+uv sync
+uv run fastapi dev app/main.py
+```
+
+The API runs at `http://127.0.0.1:8000` by default.
+
+In a second terminal, start the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL printed in the terminal, normally
+`http://localhost:5173`.
+
+To edit or open a specific document, add a document ID to the URL, for example:
+
+```text
+http://localhost:5173/my-document
+```
+
+Browsers using the same URL share the same Yjs room. Without a document ID,
+the frontend uses `default-document`.
+
+## API
+
+### WebSocket
+
+```text
+ws://127.0.0.1:8000/ws/documents/{doc_id}
+```
+
+The WebSocket endpoint receives Yjs updates for the document and loads or
+stores updates through the PostgreSQL Yjs store.
+
+### List documents
+
+```http
+GET /documents/
+```
+
+Example response:
+
+```json
+[
+  {
+    "path": "my-document"
+  }
+]
+```
+
+Interactive API documentation is available at:
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
+
+## Build
+
+Build the frontend production bundle:
+
+```bash
+cd frontend
+npm run build
+```
+
+The output is written to `frontend/dist/`.
